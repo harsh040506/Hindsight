@@ -1,0 +1,33 @@
+# --- Secrets and credentials ---
+.env
+client_secrets.json
+*_token.json
+token.json
+credentials.json
+
+# --- Hindsight local state ---
+# The catalog cache holds your channel's data. Regenerate with `hindsight ingest`.
+*.db
+*.db-journal
+*.db-wal
+.hindsight/
+out/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

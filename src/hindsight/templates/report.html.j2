@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hindsight — {{ channel.title or channel.slug }}</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:        #f9f9f7;
+    --surface:     #fcfcfb;
+    --ink:         #0b0b0b;
+    --ink-2:       #52514e;
+    --muted:       #898781;
+    --grid:        #e1e0d9;
+    --axis:        #c3c2b7;
+    --border:      rgba(11,11,11,0.10);
+    --pos:         {{ palette.pos_light }};
+    --neg:         {{ palette.neg_light }};
+    --seq:         {{ palette.seq_light }};
+    --good:        #0ca30c;
+    --warn:        #fab219;
+    --shadow:      0 1px 2px rgba(11,11,11,.05), 0 8px 24px rgba(11,11,11,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page:    #0d0d0d;
+      --surface: #1a1a19;
+      --ink:     #ffffff;
+      --ink-2:   #c3c2b7;
+      --muted:   #898781;
+      --grid:    #2c2c2a;
+      --axis:    #383835;
+      --border:  rgba(255,255,255,0.10);
+      --pos:     {{ palette.pos_dark }};
+      --neg:     {{ palette.neg_dark }};
+      --seq:     {{ palette.seq_dark }};
+      --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #fff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --pos: {{ palette.pos_dark }}; --neg: {{ palette.neg_dark }};
+    --seq: {{ palette.seq_dark }};
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1, h2, h3 { line-height: 1.25; margin: 0; font-weight: 650; }
+  h1 { font-size: 30px; letter-spacing: -0.02em; }
+  h2 { font-size: 19px; letter-spacing: -0.01em; margin-bottom: 6px; }
+  h3 { font-size: 15px; }
+  p  { margin: 0 0 12px; }
+  a  { color: var(--pos); }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+  }
+  .sub { color: var(--ink-2); font-size: 14px; }
+  section { margin-top: 40px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; box-shadow: var(--shadow);
+  }
+
+  .banner {
+    border-left: 3px solid var(--warn); background: var(--surface);
+    border-radius: 8px; padding: 12px 16px; font-size: 13.5px;
+    color: var(--ink-2); margin-bottom: 24px; border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+  }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .tile .v { font-size: 25px; font-weight: 660; letter-spacing: -.02em; }
+  .tile .k { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  .headline { border-left: 3px solid var(--pos); }
+  .headline .stat {
+    font-size: 42px; font-weight: 680; letter-spacing: -.03em; line-height: 1.05;
+  }
+  .headline .stat.down { color: var(--neg); }
+  .headline .stat.up   { color: var(--pos); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+    font-weight: 650; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap;
+  }
+  .badge.ok   { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+
+  .chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .grid     { stroke: var(--grid); stroke-width: 1; }
+  .baseline { stroke: var(--axis); stroke-width: 1.5; }
+  .marker   { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .axis-label { fill: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .axis-label.strong { fill: var(--ink-2); font-weight: 650; }
+  .axis-title { fill: var(--muted); font-size: 11px; }
+  .bar-value  { fill: var(--ink); font-size: 11px; font-weight: 650; }
+  .bar-pos { fill: var(--pos); } .bar-neg { fill: var(--neg); }
+  .bar-seq { fill: var(--seq); }
+  .bar-muted { opacity: .34; }
+  .chart path { transition: opacity .12s; cursor: default; outline: none; }
+  .chart path:hover, .chart path:focus-visible { opacity: .78; }
+
+  .finding { padding: 16px 0; border-top: 1px solid var(--border); }
+  .finding:first-of-type { border-top: 0; padding-top: 0; }
+  .finding .row {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  .finding .lift {
+    font-size: 20px; font-weight: 680; font-variant-numeric: tabular-nums;
+  }
+  .finding .lift.up { color: var(--pos); } .finding .lift.down { color: var(--neg); }
+  .meta { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .note { font-size: 13px; color: var(--ink-2); margin-top: 8px; }
+
+  .opportunity { border-left: 3px solid var(--warn); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+       color: var(--muted); font-weight: 650; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  .tag {
+    font-size: 11px; padding: 1px 7px; border-radius: 5px;
+    border: 1px solid var(--border); color: var(--muted);
+  }
+
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+  code { background: color-mix(in srgb, var(--ink) 7%, transparent);
+         padding: 1.5px 5px; border-radius: 4px; }
+  pre { background: var(--surface); border: 1px solid var(--border);
+        border-radius: 10px; padding: 14px; overflow-x: auto; font-size: 12.5px; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border);
+           font-size: 12.5px; color: var(--muted); }
+
+  #tip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
+    background: var(--ink); color: var(--page); font-size: 12px;
+    padding: 6px 9px; border-radius: 6px; max-width: 260px; z-index: 50;
+  }
+  @media (max-width: 640px) {
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    h1 { font-size: 24px; } .headline .stat { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Hindsight report</div>
+  <h1>{{ channel.title or channel.slug }}</h1>
+  <p class="sub">
+    {{ summary.eligible | commafy }} of {{ summary.total | commafy }} videos analysed ·
+    {{ summary.total_metric | commafy }} lifetime views ·
+    generated {{ generated_utc[:10] }}
+  </p>
+
+  {% if demo_mode %}
+  <div class="banner" style="margin-top:20px">
+    <strong>Demo mode.</strong> Running on the bundled catalog: a real 950-video
+    channel with genuine publish times, view counts, durations and tags. Video
+    ids, channel identity and title text are synthetic, so title-derived
+    findings below describe the surrogate vocabulary rather than a real
+    channel's. Timing, duration, tag and description findings are real.
+  </div>
+  {% endif %}
+
+  <section>
+    <div class="tiles">
+      <div class="tile">
+        <div class="v">{{ summary.eligible | commafy }}</div>
+        <div class="k">videos analysed</div>
+      </div>
+      <div class="tile">
+        <div class="v">{{ summary.median_metric | commafy }}</div>
+        <div class="k">median views</div>
+      </div>
+      <div class="tile">
+        <div class="v">{{ summary.max_metric | commafy }}</div>
+        <div class="k">best video</div>
+      </div>
+      <div class="tile">
+        <div class="v">{{ findings | length }}</div>
+        <div class="k">surviving findings</div>
+      </div>
+    </div>
+  </section>
+
+  {% if headline %}
+  <section>
+    <div class="card headline">
+      <div class="eyebrow">Biggest effect found</div>
+      <div class="stat {{ 'up' if headline.lift > 0 else 'down' }}">
+        {{ headline.lift | signed }} points
+      </div>
+      <p style="margin-top:10px; font-size:16px">
+        Videos where <strong>{{ headline.feature_label | lower }}</strong> was
+        <strong>{{ headline.bucket }}</strong>
+        {{ headline.direction }} the rest of the catalog by
+        {{ headline.abs_lift | pct }} percentile points.
+        Median <strong>{{ headline.median_views | commafy }} views</strong>
+        across {{ headline.n }} videos.
+      </p>
+      <p class="sub" style="margin-bottom:0">
+        {{ headline.lever }}.
+      </p>
+      <div class="badges">
+        <span class="badge">95% CI {{ headline.ci_low | signed }} to {{ headline.ci_high | signed }}</span>
+        <span class="badge">q = {{ '%.4f' % headline.q_value }}</span>
+        <span class="badge">n = {{ headline.n }}</span>
+        {% if headline.replicates %}
+        <span class="badge ok">✓ replicates across eras</span>
+        {% else %}
+        <span class="badge warn">⚠ does not replicate</span>
+        {% endif %}
+      </div>
+      <p class="note">{{ headline.era_note }}</p>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if spotlight_svg %}
+  <section>
+    <h2>Every value of that lever</h2>
+    <p class="sub">
+      Each bar is one choice, scored against the videos published around it.
+      Bars above the line beat their moment; bars below lost to it. Only the
+      labelled bars survived correction for testing many features at once —
+      the faded bars are not distinguishable from noise.
+    </p>
+    <div class="card" style="margin-top:14px">{{ spotlight_svg | safe }}</div>
+  </section>
+  {% endif %}
+
+  {% if findings %}
+  <section>
+    <h2>All findings</h2>
+    <p class="sub">
+      Ranked by effect size. Every p-value in this run was corrected for false
+      discovery, so a q below {{ alpha }} means roughly "fewer than
+      {{ (alpha * 100) | int }}% of findings at this threshold are flukes".
+    </p>
+    <div class="card" style="margin-top:14px">
+      {% for f in findings %}
+      <div class="finding">
+        <div class="row">
+          <span class="lift {{ 'up' if f.lift > 0 else 'down' }}">{{ f.lift | signed }}</span>
+          <strong>{{ f.feature_label }} = {{ f.bucket }}</strong>
+          <span class="tag">{{ f.group }}</span>
+          {% if f.replicates %}
+          <span class="badge ok">✓ replicates</span>
+          {% else %}
+          <span class="badge warn">⚠ single era</span>
+          {% endif %}
+        </div>
+        <div class="meta" style="margin-top:5px">
+          n = {{ f.n }} · 95% CI {{ f.ci_low | signed }} to {{ f.ci_high | signed }} ·
+          q = {{ '%.4f' % f.q_value }} ·
+          median {{ f.median_views | commafy }} views ·
+          like-rate percentile {{ f.like_rate_percentile | pct }}
+        </div>
+        <div class="note">{{ f.lever }}. {{ f.era_note }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if untested %}
+  <section>
+    <h2>Levers you have never tested</h2>
+    <p class="sub">
+      Every analysed video made the same choice here. There is no finding
+      because there is no variation — which makes these the only levers
+      guaranteed to still have headroom.
+    </p>
+    <div class="card opportunity" style="margin-top:14px">
+      {% for fr in untested %}
+      <div class="finding">
+        <div class="row"><strong>{{ fr.feature.label }}</strong>
+          <span class="tag">{{ fr.feature.group }}</span></div>
+        <div class="note">{{ fr.note }}</div>
+        <div class="note"><em>{{ fr.feature.lever }}.</em></div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if underpowered %}
+  <section>
+    <h2>Levers that varied too thinly to measure</h2>
+    <p class="sub">
+      These changed at some point, but too lopsidedly to compare. This is
+      absence of evidence, not evidence of absence.
+    </p>
+    <div class="card" style="margin-top:14px">
+      {% for fr in underpowered %}
+      <div class="finding">
+        <div class="row"><strong>{{ fr.feature.label }}</strong>
+          <span class="tag">{{ fr.feature.group }}</span></div>
+        <div class="note">{{ fr.note }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if plan %}
+  <section>
+    <h2>Your next experiment</h2>
+    <p class="sub">
+      {{ plan.rationale }}
+    </p>
+    <div class="card" style="margin-top:14px">
+      <h3>{{ plan.feature_label }} — {{ plan.lever | lower }}</h3>
+      <p class="note" style="margin-top:8px">{{ plan.hypothesis }}</p>
+
+      <div class="scroll" style="margin-top:14px">
+      <table>
+        <thead><tr><th>Arm</th><th>Value</th><th class="num">Videos</th></tr></thead>
+        <tbody>
+          {% for arm in plan.arms %}
+          <tr>
+            <td><strong>{{ arm.name }}</strong></td>
+            <td>{{ arm.value }}<div class="meta">{{ arm.note }}</div></td>
+            <td class="num">{{ arm.videos }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      <div class="badges">
+        <span class="badge">{{ plan.total_videos }} videos total</span>
+        <span class="badge">≈{{ plan.estimated_days | round | int }} days at
+          {{ plan.uploads_per_day }}/day</span>
+        <span class="badge">detects ≥{{ plan.min_detectable_effect }} points</span>
+        <span class="badge">{{ (plan.target_power * 100) | int }}% power</span>
+      </div>
+
+      {% if plan.hold_constant %}
+      <p class="note" style="margin-top:16px"><strong>Hold constant while it runs:</strong></p>
+      {% for h in plan.hold_constant %}
+      <p class="note">· <strong>{{ h.label }} = {{ h.value }}</strong> — {{ h.why }}</p>
+      {% endfor %}
+      {% endif %}
+
+      <p class="note" style="margin-top:14px"><strong>Assignment:</strong> {{ plan.assignment }}</p>
+      <p class="note" style="margin-top:14px">Read the result with
+        <code>{{ plan.readout_command }}</code> after
+        {{ plan.earliest_readout_utc[:10] }}.</p>
+
+      {% if plan.feasibility %}
+      <p class="note" style="margin-top:16px"><strong>What other time budgets would buy:</strong></p>
+      <div class="scroll">
+      <table>
+        <thead><tr><th class="num">Days</th><th class="num">Videos per arm</th>
+          <th class="num">Smallest detectable effect</th></tr></thead>
+        <tbody>
+          {% for row in plan.feasibility %}
+          <tr>
+            <td class="num">{{ row.budget_days }}</td>
+            <td class="num">{{ row.videos_per_arm }}</td>
+            <td class="num">{{ row.detectable_effect }} pts</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Why raw view counts are never compared</h2>
+    <p class="sub">
+      A video from last July has had a year to accumulate views on a smaller
+      channel. Sorting the catalog by views mostly measures publish date. Every
+      score in this report is instead a percentile against the
+      {{ params.cohort_half_width * 2 }} videos published nearest in time.
+    </p>
+    <div class="card" style="margin-top:14px">{{ distribution_svg | safe }}</div>
+  </section>
+
+  <section>
+    <h2>Every lever measured</h2>
+    <div class="card scroll" style="margin-top:14px">
+      <table>
+        <thead>
+          <tr>
+            <th>Lever</th><th>Group</th>
+            <th class="num">Values</th><th class="num">Spread</th>
+            <th>Best value</th><th class="num">Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fr in tested_features %}
+          <tr>
+            <td>{{ fr.feature.label }}</td>
+            <td><span class="tag">{{ fr.feature.group }}</span></td>
+            <td class="num">{{ fr.tested_buckets | length }}</td>
+            <td class="num">{{ fr.spread | pct }}</td>
+            <td>{% if fr.best %}{{ fr.best.bucket }}
+                <span class="meta">{{ fr.best.mean_percentile | pct }}</span>{% endif %}</td>
+            <td class="num">{{ fr.significant_buckets | length }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Best and worst performers</h2>
+    <div class="card scroll" style="margin-top:14px">
+      <table>
+        <thead><tr><th class="num">Percentile</th><th class="num">Views</th><th>Title</th></tr></thead>
+        <tbody>
+          {% for sv in top_videos %}
+          <tr><td class="num">{{ sv.percentile | pct }}</td>
+              <td class="num">{{ sv.metric_value | commafy }}</td>
+              <td>{{ sv.title }}</td></tr>
+          {% endfor %}
+          <tr><td colspan="3" class="meta" style="text-align:center">⋯</td></tr>
+          {% for sv in bottom_videos %}
+          <tr><td class="num">{{ sv.percentile | pct }}</td>
+              <td class="num">{{ sv.metric_value | commafy }}</td>
+              <td>{{ sv.title }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <strong>Method.</strong> Each video is scored as a percentile against the
+      {{ params.cohort_half_width }} videos published immediately before and
+      after it, which cancels channel growth, seasonality and video age.
+      Differences between buckets are tested by permutation
+      ({{ params.permutation_iters | commafy }} resamples, no distributional
+      assumption), and every p-value in the run is corrected for false
+      discovery via Benjamini-Hochberg. Surviving findings are re-tested
+      independently on the older and newer halves of the catalog.
+      Videos younger than {{ params.min_age_days }} days, videos without a
+      symmetric cohort, and buckets under {{ params.min_bucket_n }} videos are
+      excluded.
+    </p>
+    <p>
+      <strong>These are associations, not proofs.</strong> The catalog was not
+      randomised, so a finding is a well-supported hypothesis about a lever —
+      which is exactly why Hindsight ends by designing an experiment instead of
+      declaring victory.
+    </p>
+    <p>Hindsight v{{ version }} · generated {{ generated_utc }}</p>
+  </footer>
+</div>
+
+<div id="tip" role="status"></div>
+<script>
+  // Progressive enhancement only: the SVG carries <title> elements, so every
+  // data point is already inspectable if this never runs.
+  (function () {
+    var tip = document.getElementById('tip');
+    function show(e) {
+      var t = e.target.getAttribute && e.target.getAttribute('data-tip');
+      if (!t) return;
+      tip.textContent = t;
+      tip.style.opacity = '1';
+      move(e);
+    }
+    function move(e) {
+      var x = (e.clientX || 0) + 14, y = (e.clientY || 0) + 16;
+      var r = tip.getBoundingClientRect();
+      if (x + r.width > window.innerWidth - 8) x = window.innerWidth - r.width - 8;
+      if (y + r.height > window.innerHeight - 8) y = (e.clientY || 0) - r.height - 12;
+      tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    }
+    function hide() { tip.style.opacity = '0'; }
+    document.querySelectorAll('.chart path[data-tip]').forEach(function (el) {
+      el.addEventListener('mouseenter', show);
+      el.addEventListener('mousemove', move);
+      el.addEventListener('mouseleave', hide);
+      el.addEventListener('focus', function (e) {
+        var b = e.target.getBoundingClientRect();
+        show({ target: e.target, clientX: b.left + b.width / 2, clientY: b.top });
+      });
+      el.addEventListener('blur', hide);
+    });
+  })();
+</script>
+</body>
+</html>

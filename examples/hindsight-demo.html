@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hindsight — Demo Philosophy Channel</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:        #f9f9f7;
+    --surface:     #fcfcfb;
+    --ink:         #0b0b0b;
+    --ink-2:       #52514e;
+    --muted:       #898781;
+    --grid:        #e1e0d9;
+    --axis:        #c3c2b7;
+    --border:      rgba(11,11,11,0.10);
+    --pos:         #2a78d6;
+    --neg:         #d03b3b;
+    --seq:         #5598e7;
+    --good:        #0ca30c;
+    --warn:        #fab219;
+    --shadow:      0 1px 2px rgba(11,11,11,.05), 0 8px 24px rgba(11,11,11,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page:    #0d0d0d;
+      --surface: #1a1a19;
+      --ink:     #ffffff;
+      --ink-2:   #c3c2b7;
+      --muted:   #898781;
+      --grid:    #2c2c2a;
+      --axis:    #383835;
+      --border:  rgba(255,255,255,0.10);
+      --pos:     #3987e5;
+      --neg:     #e66767;
+      --seq:     #2a78d6;
+      --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #fff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --pos: #3987e5; --neg: #e66767;
+    --seq: #2a78d6;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1, h2, h3 { line-height: 1.25; margin: 0; font-weight: 650; }
+  h1 { font-size: 30px; letter-spacing: -0.02em; }
+  h2 { font-size: 19px; letter-spacing: -0.01em; margin-bottom: 6px; }
+  h3 { font-size: 15px; }
+  p  { margin: 0 0 12px; }
+  a  { color: var(--pos); }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+  }
+  .sub { color: var(--ink-2); font-size: 14px; }
+  section { margin-top: 40px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; box-shadow: var(--shadow);
+  }
+
+  .banner {
+    border-left: 3px solid var(--warn); background: var(--surface);
+    border-radius: 8px; padding: 12px 16px; font-size: 13.5px;
+    color: var(--ink-2); margin-bottom: 24px; border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+  }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .tile .v { font-size: 25px; font-weight: 660; letter-spacing: -.02em; }
+  .tile .k { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  .headline { border-left: 3px solid var(--pos); }
+  .headline .stat {
+    font-size: 42px; font-weight: 680; letter-spacing: -.03em; line-height: 1.05;
+  }
+  .headline .stat.down { color: var(--neg); }
+  .headline .stat.up   { color: var(--pos); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+    font-weight: 650; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap;
+  }
+  .badge.ok   { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+
+  .chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .grid     { stroke: var(--grid); stroke-width: 1; }
+  .baseline { stroke: var(--axis); stroke-width: 1.5; }
+  .marker   { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .axis-label { fill: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .axis-label.strong { fill: var(--ink-2); font-weight: 650; }
+  .axis-title { fill: var(--muted); font-size: 11px; }
+  .bar-value  { fill: var(--ink); font-size: 11px; font-weight: 650; }
+  .bar-pos { fill: var(--pos); } .bar-neg { fill: var(--neg); }
+  .bar-seq { fill: var(--seq); }
+  .bar-muted { opacity: .34; }
+  .chart path { transition: opacity .12s; cursor: default; outline: none; }
+  .chart path:hover, .chart path:focus-visible { opacity: .78; }
+
+  .finding { padding: 16px 0; border-top: 1px solid var(--border); }
+  .finding:first-of-type { border-top: 0; padding-top: 0; }
+  .finding .row {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  .finding .lift {
+    font-size: 20px; font-weight: 680; font-variant-numeric: tabular-nums;
+  }
+  .finding .lift.up { color: var(--pos); } .finding .lift.down { color: var(--neg); }
+  .meta { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .note { font-size: 13px; color: var(--ink-2); margin-top: 8px; }
+
+  .opportunity { border-left: 3px solid var(--warn); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+       color: var(--muted); font-weight: 650; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  .tag {
+    font-size: 11px; padding: 1px 7px; border-radius: 5px;
+    border: 1px solid var(--border); color: var(--muted);
+  }
+
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+  code { background: color-mix(in srgb, var(--ink) 7%, transparent);
+         padding: 1.5px 5px; border-radius: 4px; }
+  pre { background: var(--surface); border: 1px solid var(--border);
+        border-radius: 10px; padding: 14px; overflow-x: auto; font-size: 12.5px; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border);
+           font-size: 12.5px; color: var(--muted); }
+
+  #tip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
+    background: var(--ink); color: var(--page); font-size: 12px;
+    padding: 6px 9px; border-radius: 6px; max-width: 260px; z-index: 50;
+  }
+  @media (max-width: 640px) {
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    h1 { font-size: 24px; } .headline .stat { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Hindsight report</div>
+  <h1>Demo Philosophy Channel</h1>
+  <p class="sub">
+    845 of 938 videos analysed ·
+    273,942 lifetime views ·
+    generated 2026-08-16
+  </p>
+
+  <div class="banner" style="margin-top:20px">
+    <strong>Demo mode.</strong> Running on the bundled catalog: a real 950-video
+    channel with genuine publish times, view counts, durations and tags. Video
+    ids, channel identity and title text are synthetic, so title-derived
+    findings below describe the surrogate vocabulary rather than a real
+    channel's. Timing, duration, tag and description findings are real.
+  </div>
+
+  <section>
+    <div class="tiles">
+      <div class="tile">
+        <div class="v">845</div>
+        <div class="k">videos analysed</div>
+      </div>
+      <div class="tile">
+        <div class="v">137</div>
+        <div class="k">median views</div>
+      </div>
+      <div class="tile">
+        <div class="v">2,166</div>
+        <div class="k">best video</div>
+      </div>
+      <div class="tile">
+        <div class="v">2</div>
+        <div class="k">surviving findings</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card headline">
+      <div class="eyebrow">Biggest effect found</div>
+      <div class="stat down">
+        -13.9 points
+      </div>
+      <p style="margin-top:10px; font-size:16px">
+        Videos where <strong>publish hour</strong> was
+        <strong>01:00</strong>
+        underperforms the rest of the catalog by
+        13.9 percentile points.
+        Median <strong>70 views</strong>
+        across 83 videos.
+      </p>
+      <p class="sub" style="margin-bottom:0">
+        Schedule the upload for a different hour.
+      </p>
+      <div class="badges">
+        <span class="badge">95% CI -20.2 to -7.2</span>
+        <span class="badge">q = 0.0184</span>
+        <span class="badge">n = 83</span>
+        <span class="badge ok">✓ replicates across eras</span>
+      </div>
+      <p class="note">Replicates: the effect points the same way in both halves of the catalog (-4.4 early, -17.5 late), months apart. That is consistent with the choice causing the difference rather than a habit from one period.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Every value of that lever</h2>
+    <p class="sub">
+      Each bar is one choice, scored against the videos published around it.
+      Bars above the line beat their moment; bars below lost to it. Only the
+      labelled bars survived correction for testing many features at once —
+      the faded bars are not distinguishable from noise.
+    </p>
+    <div class="card" style="margin-top:14px"><svg viewBox="0 0 720 300" role="img" class="chart" aria-label="Mean cohort percentile by Publish hour"><line x1="46" y1="246.0" x2="704" y2="246.0" class="grid"/><text x="38" y="249.5" class="axis-label" text-anchor="end">34</text><line x1="46" y1="191.5" x2="704" y2="191.5" class="grid"/><text x="38" y="195.0" class="axis-label" text-anchor="end">42</text><line x1="46" y1="82.5" x2="704" y2="82.5" class="grid"/><text x="38" y="86.0" class="axis-label" text-anchor="end">58</text><line x1="46" y1="28.0" x2="704" y2="28.0" class="grid"/><text x="38" y="31.5" class="axis-label" text-anchor="end">66</text><path d="M47.0,137.0 V137.0 Q47.0,136.1 47.9,136.1 H88.0 Q88.9,136.1 88.9,137.0 V137.0 Z" class="bar-pos bar-muted" tabindex="0" data-tip="00:00 — 50.1 mean percentile, 45 videos, median 102 views, q=0.989"><title>00:00 — 50.1 mean percentile, 45 videos, median 102 views, q=0.989</title></path><text x="67.9" y="264.0" class="axis-label" text-anchor="middle">00:00</text><path d="M90.9,137.0 V217.3 Q90.9,221.3 94.9,221.3 H128.7 Q132.7,221.3 132.7,217.3 V137.0 Z" class="bar-neg" tabindex="0" data-tip="01:00 — 37.7 mean percentile, 83 videos, median 70 views, q=0.018"><title>01:00 — 37.7 mean percentile, 83 videos, median 70 views, q=0.018</title></path><text x="111.8" y="235.3" class="bar-value" text-anchor="middle">38</text><text x="111.8" y="264.0" class="axis-label" text-anchor="middle">01:00</text><path d="M134.7,137.0 V137.0 Q134.7,140.1 137.8,140.1 H173.5 Q176.6,140.1 176.6,137.0 V137.0 Z" class="bar-neg bar-muted" tabindex="0" data-tip="09:00 — 49.5 mean percentile, 22 videos, median 109 views, q=0.971"><title>09:00 — 49.5 mean percentile, 22 videos, median 109 views, q=0.971</title></path><text x="155.7" y="264.0" class="axis-label" text-anchor="middle">09:00</text><path d="M178.6,137.0 V149.9 Q178.6,153.9 182.6,153.9 H216.5 Q220.5,153.9 220.5,149.9 V137.0 Z" class="bar-neg bar-muted" tabindex="0" data-tip="10:00 — 47.5 mean percentile, 42 videos, median 124 views, q=0.851"><title>10:00 — 47.5 mean percentile, 42 videos, median 124 views, q=0.851</title></path><text x="199.5" y="264.0" class="axis-label" text-anchor="middle">10:00</text><path d="M222.5,137.0 V154.9 Q222.5,158.9 226.5,158.9 H260.3 Q264.3,158.9 264.3,154.9 V137.0 Z" class="bar-neg bar-muted" tabindex="0" data-tip="11:00 — 46.8 mean percentile, 25 videos, median 159 views, q=0.851"><title>11:00 — 46.8 mean percentile, 25 videos, median 159 views, q=0.851</title></path><text x="243.4" y="264.0" class="axis-label" text-anchor="middle">11:00</text><path d="M266.3,137.0 V53.8 Q266.3,49.8 270.3,49.8 H304.2 Q308.2,49.8 308.2,53.8 V137.0 Z" class="bar-pos" tabindex="0" data-tip="12:00 — 62.7 mean percentile, 58 videos, median 323 views, q=0.041"><title>12:00 — 62.7 mean percentile, 58 videos, median 323 views, q=0.041</title></path><text x="287.3" y="43.8" class="bar-value" text-anchor="middle">63</text><text x="287.3" y="264.0" class="axis-label" text-anchor="middle">12:00</text><path d="M310.2,137.0 V88.2 Q310.2,84.2 314.2,84.2 H348.1 Q352.1,84.2 352.1,88.2 V137.0 Z" class="bar-pos bar-muted" tabindex="0" data-tip="13:00 — 57.7 mean percentile, 68 videos, median 174 views, q=0.308"><title>13:00 — 57.7 mean percentile, 68 videos, median 174 views, q=0.308</title></path><text x="331.1" y="264.0" class="axis-label" text-anchor="middle">13:00</text><path d="M354.1,137.0 V149.7 Q354.1,153.7 358.1,153.7 H391.9 Q395.9,153.7 395.9,149.7 V137.0 Z" class="bar-neg bar-muted" tabindex="0" data-tip="14:00 — 47.6 mean percentile, 89 videos, median 178 views, q=0.720"><title>14:00 — 47.6 mean percentile, 89 videos, median 178 views, q=0.720</title></path><text x="375.0" y="264.0" class="axis-label" text-anchor="middle">14:00</text><path d="M397.9,137.0 V124.9 Q397.9,120.9 401.9,120.9 H435.8 Q439.8,120.9 439.8,124.9 V137.0 Z" class="bar-pos bar-muted" tabindex="0" data-tip="15:00 — 52.3 mean percentile, 72 videos, median 207 views, q=0.851"><title>15:00 — 52.3 mean percentile, 72 videos, median 207 views, q=0.851</title></path><text x="418.9" y="264.0" class="axis-label" text-anchor="middle">15:00</text><path d="M441.8,137.0 V109.8 Q441.8,105.8 445.8,105.8 H479.7 Q483.7,105.8 483.7,109.8 V137.0 Z" class="bar-pos bar-muted" tabindex="0" data-tip="16:00 — 54.6 mean percentile, 48 videos, median 276 views, q=0.720"><title>16:00 — 54.6 mean percentile, 48 videos, median 276 views, q=0.720</title></path><text x="462.7" y="264.0" class="axis-label" text-anchor="middle">16:00</text><path d="M485.7,137.0 V160.5 Q485.7,164.5 489.7,164.5 H523.5 Q527.5,164.5 527.5,160.5 V137.0 Z" class="bar-neg bar-muted" tabindex="0" data-tip="17:00 — 46.0 mean percentile, 52 videos, median 133 views, q=0.720"><title>17:00 — 46.0 mean percentile, 52 videos, median 133 views, q=0.720</title></path><text x="506.6" y="264.0" class="axis-label" text-anchor="middle">17:00</text><path d="M529.5,137.0 V132.8 Q529.5,128.8 533.5,128.8 H567.4 Q571.4,128.8 571.4,132.8 V137.0 Z" class="bar-pos bar-muted" tabindex="0" data-tip="18:00 — 51.2 mean percentile, 75 videos, median 99 views, q=0.901"><title>18:00 — 51.2 mean percentile, 75 videos, median 99 views, q=0.901</title></path><text x="550.5" y="264.0" class="axis-label" text-anchor="middle">18:00</text><path d="M573.4,137.0 V109.5 Q573.4,105.5 577.4,105.5 H611.3 Q615.3,105.5 615.3,109.5 V137.0 Z" class="bar-pos bar-muted" tabindex="0" data-tip="19:00 — 54.6 mean percentile, 58 videos, median 129 views, q=0.720"><title>19:00 — 54.6 mean percentile, 58 videos, median 129 views, q=0.720</title></path><text x="594.3" y="264.0" class="axis-label" text-anchor="middle">19:00</text><path d="M617.3,137.0 V93.1 Q617.3,89.1 621.3,89.1 H655.1 Q659.1,89.1 659.1,93.1 V137.0 Z" class="bar-pos bar-muted" tabindex="0" data-tip="22:00 — 57.0 mean percentile, 20 videos, median 164 views, q=0.720"><title>22:00 — 57.0 mean percentile, 20 videos, median 164 views, q=0.720</title></path><text x="638.2" y="264.0" class="axis-label" text-anchor="middle">22:00</text><path d="M661.1,137.0 V196.9 Q661.1,200.9 665.1,200.9 H699.0 Q703.0,200.9 703.0,196.9 V137.0 Z" class="bar-neg bar-muted" tabindex="0" data-tip="23:00 — 40.7 mean percentile, 54 videos, median 201 views, q=0.198"><title>23:00 — 40.7 mean percentile, 54 videos, median 201 views, q=0.198</title></path><text x="682.1" y="264.0" class="axis-label" text-anchor="middle">23:00</text><line x1="46" y1="137.0" x2="704" y2="137.0" class="baseline"/><text x="38" y="140.5" class="axis-label strong" text-anchor="end">50</text><text x="46" y="292" class="axis-title">Publish hour — mean cohort percentile (50 = performed like its neighbours)</text></svg></div>
+  </section>
+
+  <section>
+    <h2>All findings</h2>
+    <p class="sub">
+      Ranked by effect size. Every p-value in this run was corrected for false
+      discovery, so a q below 0.05 means roughly "fewer than
+      5% of findings at this threshold are flukes".
+    </p>
+    <div class="card" style="margin-top:14px">
+      <div class="finding">
+        <div class="row">
+          <span class="lift down">-13.9</span>
+          <strong>Publish hour = 01:00</strong>
+          <span class="tag">timing</span>
+          <span class="badge ok">✓ replicates</span>
+        </div>
+        <div class="meta" style="margin-top:5px">
+          n = 83 · 95% CI -20.2 to -7.2 ·
+          q = 0.0184 ·
+          median 70 views ·
+          like-rate percentile 43.7
+        </div>
+        <div class="note">Schedule the upload for a different hour. Replicates: the effect points the same way in both halves of the catalog (-4.4 early, -17.5 late), months apart. That is consistent with the choice causing the difference rather than a habit from one period.</div>
+      </div>
+      <div class="finding">
+        <div class="row">
+          <span class="lift up">+13.5</span>
+          <strong>Publish hour = 12:00</strong>
+          <span class="tag">timing</span>
+          <span class="badge ok">✓ replicates</span>
+        </div>
+        <div class="meta" style="margin-top:5px">
+          n = 58 · 95% CI +5.9 to +20.6 ·
+          q = 0.0414 ·
+          median 323 views ·
+          like-rate percentile 58.4
+        </div>
+        <div class="note">Schedule the upload for a different hour. Replicates: the effect points the same way in both halves of the catalog (+12.9 early, +14.0 late), months apart. That is consistent with the choice causing the difference rather than a habit from one period.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Levers you have never tested</h2>
+    <p class="sub">
+      Every analysed video made the same choice here. There is no finding
+      because there is no variation — which makes these the only levers
+      guaranteed to still have headroom.
+    </p>
+    <div class="card opportunity" style="margin-top:14px">
+      <div class="finding">
+        <div class="row"><strong>Number of tags</strong>
+          <span class="tag">metadata</span></div>
+        <div class="note">All 845 analysed videos used the same value (5 tags). This lever has never been tested on this channel.</div>
+        <div class="note"><em>Add or remove tags.</em></div>
+      </div>
+      <div class="finding">
+        <div class="row"><strong>Tag set used</strong>
+          <span class="tag">metadata</span></div>
+        <div class="note">All 845 analysed videos used the same value (bookstagram, darkacademia, literature, philosophy, quotes). This lever has never been tested on this channel.</div>
+        <div class="note"><em>Use a different set of tags.</em></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Levers that varied too thinly to measure</h2>
+    <p class="sub">
+      These changed at some point, but too lopsidedly to compare. This is
+      absence of evidence, not evidence of absence.
+    </p>
+    <div class="card" style="margin-top:14px">
+      <div class="finding">
+        <div class="row"><strong>Call to action in description</strong>
+          <span class="tag">metadata</span></div>
+        <div class="note">837 of 845 videos (99%) used 'has CTA', leaving only 8 in the smallest alternative. A comparison needs at least 20 videos on both sides, so this lever cannot be measured yet -- which is not evidence that it does not matter.</div>
+      </div>
+      <div class="finding">
+        <div class="row"><strong>Sentence form</strong>
+          <span class="tag">title</span></div>
+        <div class="note">844 of 845 videos (100%) used 'statement', leaving only 1 in the smallest alternative. A comparison needs at least 20 videos on both sides, so this lever cannot be measured yet -- which is not evidence that it does not matter.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Your next experiment</h2>
+    <p class="sub">
+      Every one of the 845 analysed videos made the same choice here, so this lever has produced no evidence in the entire history of the channel. Whatever it is worth is still on the table.
+    </p>
+    <div class="card" style="margin-top:14px">
+      <h3>Tag set used — use a different set of tags</h3>
+      <p class="note" style="margin-top:8px">Changing tag set used ('bookstagram, darkacademia, literature, philosophy, quotes' vs 'bookstagram, darkacademia, literature, philosophy, quotes, honest, illusion, conscience, clarity, restless, wisdom, ancient, fragile, unspoken, luminous') shifts a video's cohort-relative view percentile. Null hypothesis: it makes no difference.</p>
+
+      <div class="scroll" style="margin-top:14px">
+      <table>
+        <thead><tr><th>Arm</th><th>Value</th><th class="num">Videos</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>control</strong></td>
+            <td>bookstagram, darkacademia, literature, philosophy, quotes<div class="meta">The tag set every video has used so far.</div></td>
+            <td class="num">173</td>
+          </tr>
+          <tr>
+            <td><strong>expanded</strong></td>
+            <td>bookstagram, darkacademia, literature, philosophy, quotes, honest, illusion, conscience, clarity, restless, wisdom, ancient, fragile, unspoken, luminous<div class="meta">Control tags plus topical terms mined from the titles of this channel's own best-performing videos.</div></td>
+            <td class="num">173</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="badges">
+        <span class="badge">346 videos total</span>
+        <span class="badge">≈90 days at
+          3.85/day</span>
+        <span class="badge">detects ≥8.7 points</span>
+        <span class="badge">80% power</span>
+      </div>
+
+      <p class="note" style="margin-top:16px"><strong>Hold constant while it runs:</strong></p>
+      <p class="note">· <strong>Publish hour = 12:00</strong> — This lever is known to move results -- its best and worst values differ by 25.1 percentile points. '12:00' is the strongest value observed (62.7 mean percentile over 58 videos). Hold it there so it cannot confound this test.</p>
+
+      <p class="note" style="margin-top:14px"><strong>Assignment:</strong> Alternate arms upload by upload, in strict rotation. Do not run one arm to completion and then the other -- that tests one period against another, not one arm against the other.</p>
+      <p class="note" style="margin-top:14px">Read the result with
+        <code>hindsight verdict exp_20260816_tag_set</code> after
+        2026-11-28.</p>
+
+      <p class="note" style="margin-top:16px"><strong>What other time budgets would buy:</strong></p>
+      <div class="scroll">
+      <table>
+        <thead><tr><th class="num">Days</th><th class="num">Videos per arm</th>
+          <th class="num">Smallest detectable effect</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="num">14</td>
+            <td class="num">26</td>
+            <td class="num">22.4 pts</td>
+          </tr>
+          <tr>
+            <td class="num">30</td>
+            <td class="num">57</td>
+            <td class="num">15.1 pts</td>
+          </tr>
+          <tr>
+            <td class="num">60</td>
+            <td class="num">115</td>
+            <td class="num">10.7 pts</td>
+          </tr>
+          <tr>
+            <td class="num">90</td>
+            <td class="num">173</td>
+            <td class="num">8.7 pts</td>
+          </tr>
+          <tr>
+            <td class="num">180</td>
+            <td class="num">346</td>
+            <td class="num">6.1 pts</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why raw view counts are never compared</h2>
+    <p class="sub">
+      A video from last July has had a year to accumulate views on a smaller
+      channel. Sorting the catalog by views mostly measures publish date. Every
+      score in this report is instead a percentile against the
+      50 videos published nearest in time.
+    </p>
+    <div class="card" style="margin-top:14px"><svg viewBox="0 0 720 200" role="img" class="chart" aria-label="Distribution of view counts across the catalog"><path d="M47.0,156.0 V80.7 Q47.0,76.7 51.0,76.7 H60.4 Q64.4,76.7 64.4,80.7 V156.0 Z" class="bar-seq" tabindex="0" data-tip="143 videos between 0 and 64 views"><title>143 videos between 0 and 64 views</title></path><path d="M66.4,156.0 V18.0 Q66.4,14.0 70.4,14.0 H79.7 Q83.7,14.0 83.7,18.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="256 videos between 64 and 127 views"><title>256 videos between 64 and 127 views</title></path><path d="M85.7,156.0 V98.4 Q85.7,94.4 89.7,94.4 H99.1 Q103.1,94.4 103.1,98.4 V156.0 Z" class="bar-seq" tabindex="0" data-tip="111 videos between 127 and 191 views"><title>111 videos between 127 and 191 views</title></path><path d="M105.1,156.0 V126.2 Q105.1,122.2 109.1,122.2 H118.4 Q122.4,122.2 122.4,126.2 V156.0 Z" class="bar-seq" tabindex="0" data-tip="61 videos between 191 and 255 views"><title>61 videos between 191 and 255 views</title></path><path d="M124.4,156.0 V138.9 Q124.4,134.9 128.4,134.9 H137.8 Q141.8,134.9 141.8,138.9 V156.0 Z" class="bar-seq" tabindex="0" data-tip="38 videos between 255 and 319 views"><title>38 videos between 255 and 319 views</title></path><path d="M143.8,156.0 V143.4 Q143.8,139.4 147.8,139.4 H157.1 Q161.1,139.4 161.1,143.4 V156.0 Z" class="bar-seq" tabindex="0" data-tip="30 videos between 319 and 382 views"><title>30 videos between 319 and 382 views</title></path><path d="M163.1,156.0 V150.0 Q163.1,146.0 167.1,146.0 H176.5 Q180.5,146.0 180.5,150.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="18 videos between 382 and 446 views"><title>18 videos between 382 and 446 views</title></path><path d="M182.5,156.0 V150.0 Q182.5,146.0 186.5,146.0 H195.8 Q199.8,146.0 199.8,150.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="18 videos between 446 and 510 views"><title>18 videos between 446 and 510 views</title></path><path d="M201.8,156.0 V153.3 Q201.8,149.3 205.8,149.3 H215.2 Q219.2,149.3 219.2,153.3 V156.0 Z" class="bar-seq" tabindex="0" data-tip="12 videos between 510 and 573 views"><title>12 videos between 510 and 573 views</title></path><path d="M221.2,156.0 V153.9 Q221.2,149.9 225.2,149.9 H234.5 Q238.5,149.9 238.5,153.9 V156.0 Z" class="bar-seq" tabindex="0" data-tip="11 videos between 573 and 637 views"><title>11 videos between 573 and 637 views</title></path><path d="M240.5,156.0 V154.5 Q240.5,150.5 244.5,150.5 H253.9 Q257.9,150.5 257.9,154.5 V156.0 Z" class="bar-seq" tabindex="0" data-tip="10 videos between 637 and 701 views"><title>10 videos between 637 and 701 views</title></path><path d="M259.9,156.0 V154.5 Q259.9,150.5 263.9,150.5 H273.2 Q277.2,150.5 277.2,154.5 V156.0 Z" class="bar-seq" tabindex="0" data-tip="10 videos between 701 and 764 views"><title>10 videos between 701 and 764 views</title></path><path d="M279.2,156.0 V156.0 Q279.2,152.7 282.6,152.7 H293.3 Q296.6,152.7 296.6,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="6 videos between 764 and 828 views"><title>6 videos between 764 and 828 views</title></path><path d="M298.6,156.0 V154.5 Q298.6,150.5 302.6,150.5 H311.9 Q315.9,150.5 315.9,154.5 V156.0 Z" class="bar-seq" tabindex="0" data-tip="10 videos between 828 and 892 views"><title>10 videos between 828 and 892 views</title></path><path d="M317.9,156.0 V153.3 Q317.9,149.3 321.9,149.3 H331.3 Q335.3,149.3 335.3,153.3 V156.0 Z" class="bar-seq" tabindex="0" data-tip="12 videos between 892 and 956 views"><title>12 videos between 892 and 956 views</title></path><path d="M337.3,156.0 V151.1 Q337.3,147.1 341.3,147.1 H350.6 Q354.6,147.1 354.6,151.1 V156.0 Z" class="bar-seq" tabindex="0" data-tip="16 videos between 956 and 1,019 views"><title>16 videos between 956 and 1,019 views</title></path><path d="M356.6,156.0 V153.3 Q356.6,149.3 360.6,149.3 H370.0 Q374.0,149.3 374.0,153.3 V156.0 Z" class="bar-seq" tabindex="0" data-tip="12 videos between 1,019 and 1,083 views"><title>12 videos between 1,019 and 1,083 views</title></path><path d="M376.0,156.0 V151.1 Q376.0,147.1 380.0,147.1 H389.4 Q393.4,147.1 393.4,151.1 V156.0 Z" class="bar-seq" tabindex="0" data-tip="16 videos between 1,083 and 1,147 views"><title>16 videos between 1,083 and 1,147 views</title></path><path d="M395.4,156.0 V154.5 Q395.4,150.5 399.4,150.5 H408.7 Q412.7,150.5 412.7,154.5 V156.0 Z" class="bar-seq" tabindex="0" data-tip="10 videos between 1,147 and 1,210 views"><title>10 videos between 1,147 and 1,210 views</title></path><path d="M414.7,156.0 V155.0 Q414.7,151.0 418.7,151.0 H428.1 Q432.1,151.0 432.1,155.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="9 videos between 1,210 and 1,274 views"><title>9 videos between 1,210 and 1,274 views</title></path><path d="M434.1,156.0 V153.9 Q434.1,149.9 438.1,149.9 H447.4 Q451.4,149.9 451.4,153.9 V156.0 Z" class="bar-seq" tabindex="0" data-tip="11 videos between 1,274 and 1,338 views"><title>11 videos between 1,274 and 1,338 views</title></path><path d="M453.4,156.0 V156.0 Q453.4,153.8 455.6,153.8 H468.5 Q470.8,153.8 470.8,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="4 videos between 1,338 and 1,402 views"><title>4 videos between 1,338 and 1,402 views</title></path><path d="M472.8,156.0 V156.0 Q472.8,154.3 474.4,154.3 H488.5 Q490.1,154.3 490.1,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="3 videos between 1,402 and 1,465 views"><title>3 videos between 1,402 and 1,465 views</title></path><path d="M492.1,156.0 V156.0 Q492.1,154.9 493.2,154.9 H508.4 Q509.5,154.9 509.5,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="2 videos between 1,465 and 1,529 views"><title>2 videos between 1,465 and 1,529 views</title></path><path d="M511.5,156.0 V156.0 Q511.5,155.4 512.0,155.4 H528.3 Q528.8,155.4 528.8,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="1 videos between 1,529 and 1,593 views"><title>1 videos between 1,529 and 1,593 views</title></path><path d="M530.8,156.0 V156.0 Q530.8,154.3 532.5,154.3 H546.5 Q548.2,154.3 548.2,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="3 videos between 1,593 and 1,656 views"><title>3 videos between 1,593 and 1,656 views</title></path><path d="M550.2,156.0 V156.0 Q550.2,154.9 551.3,154.9 H566.4 Q567.5,154.9 567.5,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="2 videos between 1,656 and 1,720 views"><title>2 videos between 1,656 and 1,720 views</title></path><path d="M588.9,156.0 V156.0 Q588.9,155.4 589.4,155.4 H605.7 Q606.2,155.4 606.2,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="1 videos between 1,784 and 1,847 views"><title>1 videos between 1,784 and 1,847 views</title></path><path d="M608.2,156.0 V156.0 Q608.2,153.8 610.5,153.8 H623.4 Q625.6,153.8 625.6,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="4 videos between 1,847 and 1,911 views"><title>4 videos between 1,847 and 1,911 views</title></path><path d="M627.6,156.0 V156.0 Q627.6,155.4 628.1,155.4 H644.4 Q644.9,155.4 644.9,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="1 videos between 1,911 and 1,975 views"><title>1 videos between 1,911 and 1,975 views</title></path><path d="M646.9,156.0 V156.0 Q646.9,155.4 647.5,155.4 H663.7 Q664.3,155.4 664.3,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="1 videos between 1,975 and 2,039 views"><title>1 videos between 1,975 and 2,039 views</title></path><path d="M685.6,156.0 V156.0 Q685.6,154.3 687.3,154.3 H701.3 Q703.0,154.3 703.0,156.0 V156.0 Z" class="bar-seq" tabindex="0" data-tip="3 videos between 2,102 and 2,166 views"><title>3 videos between 2,102 and 2,166 views</title></path><line x1="87.6" y1="14" x2="87.6" y2="156.0" class="marker"/><text x="93.6" y="26.0" class="bar-value">median 137</text><line x1="46" y1="156.0" x2="704" y2="156.0" class="baseline"/><text x="46" y="178.0" class="axis-label">0</text><text x="704" y="178.0" class="axis-label" text-anchor="end">2,166</text><text x="46" y="194.0" class="axis-title">Lifetime views per video — the long tail is why raw view counts are never compared directly</text></svg></div>
+  </section>
+
+  <section>
+    <h2>Every lever measured</h2>
+    <div class="card scroll" style="margin-top:14px">
+      <table>
+        <thead>
+          <tr>
+            <th>Lever</th><th>Group</th>
+            <th class="num">Values</th><th class="num">Spread</th>
+            <th>Best value</th><th class="num">Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Publish hour</td>
+            <td><span class="tag">timing</span></td>
+            <td class="num">15</td>
+            <td class="num">25.1</td>
+            <td>12:00
+                <span class="meta">62.7</span></td>
+            <td class="num">2</td>
+          </tr>
+          <tr>
+            <td>Title word count</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">8</td>
+            <td class="num">13.5</td>
+            <td>12 words
+                <span class="meta">54.2</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Clause structure</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">3</td>
+            <td class="num">10.8</td>
+            <td>single clause
+                <span class="meta">52.3</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Which emoji</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">8</td>
+            <td class="num">8.6</td>
+            <td>🧠
+                <span class="meta">53.1</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Time of day</td>
+            <td><span class="tag">timing</span></td>
+            <td class="num">4</td>
+            <td class="num">7.5</td>
+            <td>afternoon (12-18)
+                <span class="meta">53.2</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Opening word</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">7</td>
+            <td class="num">7.5</td>
+            <td>your
+                <span class="meta">52.5</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'hidden'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">6.0</td>
+            <td>no 'hidden'
+                <span class="meta">51.5</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Day of week</td>
+            <td><span class="tag">timing</span></td>
+            <td class="num">7</td>
+            <td class="num">5.9</td>
+            <td>Sunday
+                <span class="meta">52.8</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'certain'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">4.2</td>
+            <td>no 'certain'
+                <span class="meta">51.0</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Description length</td>
+            <td><span class="tag">metadata</span></td>
+            <td class="num">4</td>
+            <td class="num">4.1</td>
+            <td>920-1002 chars
+                <span class="meta">51.8</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Video length</td>
+            <td><span class="tag">metadata</span></td>
+            <td class="num">4</td>
+            <td class="num">4.0</td>
+            <td>17s
+                <span class="meta">50.9</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Second-person address</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">3.8</td>
+            <td>addresses 'you'
+                <span class="meta">52.5</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'difficult'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">3.6</td>
+            <td>no 'difficult'
+                <span class="meta">50.9</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'freedom'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">2.8</td>
+            <td>no 'freedom'
+                <span class="meta">50.8</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title character count</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">4</td>
+            <td class="num">2.5</td>
+            <td>80-94 chars
+                <span class="meta">51.1</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'honest'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">2.4</td>
+            <td>contains 'honest'
+                <span class="meta">52.0</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'clarity'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">2.3</td>
+            <td>contains 'clarity'
+                <span class="meta">52.1</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'wonder'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">2.1</td>
+            <td>no 'wonder'
+                <span class="meta">50.6</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Emoji in title</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">1.6</td>
+            <td>with emoji
+                <span class="meta">50.3</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'conscience'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">1.4</td>
+            <td>contains 'conscience'
+                <span class="meta">51.3</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'luminous'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">1.3</td>
+            <td>contains 'luminous'
+                <span class="meta">51.2</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'illusion'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">1.2</td>
+            <td>contains 'illusion'
+                <span class="meta">51.1</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'ancient'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">1.1</td>
+            <td>no 'ancient'
+                <span class="meta">50.4</span></td>
+            <td class="num">0</td>
+          </tr>
+          <tr>
+            <td>Title contains 'unspoken'</td>
+            <td><span class="tag">title</span></td>
+            <td class="num">2</td>
+            <td class="num">0.2</td>
+            <td>contains 'unspoken'
+                <span class="meta">50.3</span></td>
+            <td class="num">0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Best and worst performers</h2>
+    <div class="card scroll" style="margin-top:14px">
+      <table>
+        <thead><tr><th class="num">Percentile</th><th class="num">Views</th><th>Title</th></tr></thead>
+        <tbody>
+          <tr><td class="num">100.0</td>
+              <td class="num">2,120</td>
+              <td>A virtue burden dissolves fragile sober freedom intention. 🖤</td></tr>
+          <tr><td class="num">100.0</td>
+              <td class="num">2,166</td>
+              <td>Your presence shapes restless courage, burden resists unspoken honest doubt. 🖤</td></tr>
+          <tr><td class="num">100.0</td>
+              <td class="num">1,355</td>
+              <td>Your virtue memory demands restless clarity longing. 🌌</td></tr>
+          <tr><td class="num">100.0</td>
+              <td class="num">979</td>
+              <td>True restless surrender freedom survives ancient wonder, outlasts ordinary wonder survives restless silence. 🧠</td></tr>
+          <tr><td class="num">100.0</td>
+              <td class="num">1,212</td>
+              <td>Your solitude demands sober wisdom fragile, freedom, conscience answers certain fate. 🧠</td></tr>
+          <tr><td colspan="3" class="meta" style="text-align:center">⋯</td></tr>
+          <tr><td class="num">0.0</td>
+              <td class="num">2</td>
+              <td>True shadow intention difficult restraint, freedom reveals ordinary intention. 🌌</td></tr>
+          <tr><td class="num">0.0</td>
+              <td class="num">0</td>
+              <td>True certain illusion silence begins ancient fate shadow silence hidden solitude. 🧠</td></tr>
+          <tr><td class="num">0.0</td>
+              <td class="num">0</td>
+              <td>Our luminous, illusion shadow resists fragile clarity hidden presence hidden wonder longing shapes difficult presence. 🌌</td></tr>
+          <tr><td class="num">0.0</td>
+              <td class="num">37</td>
+              <td>Our solitude clarity survives unspoken stillness illusion clarity wonder. 🌲</td></tr>
+          <tr><td class="num">0.0</td>
+              <td class="num">3</td>
+              <td>Real certain presence presence courage conscience patience sharpens, sober longing freedom reflection conscience illusion. 🌌</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <strong>Method.</strong> Each video is scored as a percentile against the
+      25 videos published immediately before and
+      after it, which cancels channel growth, seasonality and video age.
+      Differences between buckets are tested by permutation
+      (10,000 resamples, no distributional
+      assumption), and every p-value in the run is corrected for false
+      discovery via Benjamini-Hochberg. Surviving findings are re-tested
+      independently on the older and newer halves of the catalog.
+      Videos younger than 14 days, videos without a
+      symmetric cohort, and buckets under 20 videos are
+      excluded.
+    </p>
+    <p>
+      <strong>These are associations, not proofs.</strong> The catalog was not
+      randomised, so a finding is a well-supported hypothesis about a lever —
+      which is exactly why Hindsight ends by designing an experiment instead of
+      declaring victory.
+    </p>
+    <p>Hindsight v1.0.0 · generated 2026-08-16T18:34:17+00:00</p>
+  </footer>
+</div>
+
+<div id="tip" role="status"></div>
+<script>
+  // Progressive enhancement only: the SVG carries <title> elements, so every
+  // data point is already inspectable if this never runs.
+  (function () {
+    var tip = document.getElementById('tip');
+    function show(e) {
+      var t = e.target.getAttribute && e.target.getAttribute('data-tip');
+      if (!t) return;
+      tip.textContent = t;
+      tip.style.opacity = '1';
+      move(e);
+    }
+    function move(e) {
+      var x = (e.clientX || 0) + 14, y = (e.clientY || 0) + 16;
+      var r = tip.getBoundingClientRect();
+      if (x + r.width > window.innerWidth - 8) x = window.innerWidth - r.width - 8;
+      if (y + r.height > window.innerHeight - 8) y = (e.clientY || 0) - r.height - 12;
+      tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    }
+    function hide() { tip.style.opacity = '0'; }
+    document.querySelectorAll('.chart path[data-tip]').forEach(function (el) {
+      el.addEventListener('mouseenter', show);
+      el.addEventListener('mousemove', move);
+      el.addEventListener('mouseleave', hide);
+      el.addEventListener('focus', function (e) {
+        var b = e.target.getBoundingClientRect();
+        show({ target: e.target, clientX: b.left + b.width / 2, clientY: b.top });
+      });
+      el.addEventListener('blur', hide);
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Hindsight runtime dependencies.
+#
+# Deliberately small. The statistical methods -- cohort percentile scoring,
+# permutation testing, bootstrap intervals, Benjamini-Hochberg correction and
+# the power calculation -- are all implemented in this repo rather than pulled
+# from scipy or statsmodels. numpy is here to make the resampling loops fast
+# (a permutation test is tens of millions of operations), not to supply the
+# statistics. See docs/METHODOLOGY.md.
+
+numpy>=1.24.0
+google-api-python-client>=2.180.0
+google-auth>=2.40.0
+google-auth-oauthlib>=1.2.0
+click>=8.1.0
+Jinja2>=3.1.0
+python-dotenv>=1.0.0
